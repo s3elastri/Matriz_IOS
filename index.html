@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matriz IOS — Proativo x Reativo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --blue-900:#0b2d5c;
+    --blue-700:#154a8f;
+    --blue-600:#1c5fbf;
+    --blue-100:#dce8fb;
+    --quad-best:#bfd7fb;
+    --quad-mixed:#e7ecf5;
+    --quad-worst:#f8f9fb;
+    --bubble-blue:#1c5fbf;
+    --bubble-gray:#b9bec9;
+    --ink:#1c2333;
+    --ink-soft:#5b6472;
+    --line:#dfe3ea;
+    --bg:#eef1f6;
+    --card:#ffffff;
+    --green:#1e9c5c;
+    --red:#c8433f;
+    --amber:#b8860b;
+    font-family:"Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    padding:24px;
+  }
+  .app-shell{
+    max-width:1180px;
+    margin:0 auto;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+  }
+  h1{
+    font-size:22px;
+    margin:0;
+    color:var(--blue-900);
+    letter-spacing:.2px;
+  }
+  .subtitle{
+    margin:2px 0 0;
+    font-size:13px;
+    color:var(--ink-soft);
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:18px 20px;
+    box-shadow:0 1px 2px rgba(20,30,60,.04);
+  }
+  .topbar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:14px;
+    align-items:flex-end;
+    justify-content:space-between;
+  }
+  .topbar-left{display:flex;flex-direction:column;gap:2px;}
+  .topbar-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:center;
+  }
+  label.field-label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    color:var(--ink-soft);
+    font-weight:600;
+    display:block;
+    margin-bottom:4px;
+  }
+  input.ref-input{
+    font-size:14px;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    min-width:180px;
+  }
+  select.hist-select{
+    font-size:13px;
+    padding:7px 8px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    max-width:220px;
+  }
+  button, .btn{
+    font-size:13px;
+    padding:8px 13px;
+    border-radius:6px;
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--ink);
+    cursor:pointer;
+    font-weight:600;
+    white-space:nowrap;
+    transition:background .15s, border-color .15s;
+  }
+  button:hover, .btn:hover{ border-color:var(--blue-600); }
+  button.primary{
+    background:var(--blue-600);
+    border-color:var(--blue-600);
+    color:#fff;
+  }
+  button.primary:hover{ background:var(--blue-700); }
+  button.ghost{ background:transparent; }
+  button.small{ padding:5px 9px; font-size:12px; }
+  button:disabled{ opacity:.45; cursor:not-allowed; }
+  .section-title{
+    font-size:14px;
+    font-weight:700;
+    color:var(--blue-900);
+    margin:0 0 10px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .section-hint{
+    font-size:12px;
+    font-weight:400;
+    color:var(--ink-soft);
+  }
+  .table-scroll{ overflow-x:auto; }
+  table.indicator-table{
+    border-collapse:collapse;
+    width:100%;
+    min-width:560px;
+  }
+  table.indicator-table th, table.indicator-table td{
+    border:1px solid var(--line);
+    padding:5px 6px;
+    text-align:center;
+  }
+  table.indicator-table thead th{
+    background:var(--blue-100);
+    color:var(--blue-900);
+  }
+  td.row-label, th.row-label-col{
+    text-align:left;
+    font-weight:700;
+    background:#f5f7fb;
+    color:var(--blue-900);
+    min-width:70px;
+    font-size:13px;
+  }
+  tr.group-row td{
+    background:var(--blue-900);
+    color:#fff;
+    text-align:left;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    padding:6px 8px;
+  }
+  tr.group-row span{ text-transform:none; letter-spacing:0; opacity:.8; font-weight:400; margin-left:6px;}
+  .obra-head{ display:flex; align-items:center; gap:4px; min-width:120px;}
+  input.obra-name-input{
+    width:100%;
+    border:none;
+    background:transparent;
+    font-weight:700;
+    color:var(--blue-900);
+    font-size:12.5px;
+    text-align:center;
+    padding:3px 2px;
+    border-radius:4px;
+  }
+  input.obra-name-input:focus{ background:#fff; outline:1px solid var(--blue-600); }
+  button.remove-obra-btn{
+    border:none; background:transparent; color:#a2262c; font-size:15px; font-weight:700;
+    padding:0 3px; cursor:pointer; line-height:1;
+  }
+  input.cell-input{
+    width:70px;
+    text-align:center;
+    border:1px solid transparent;
+    border-radius:4px;
+    padding:5px 4px;
+    font-size:13px;
+    background:#fafbfd;
+  }
+  input.cell-input:focus{ border-color:var(--blue-600); background:#fff; outline:none; }
+  .pct-input-wrap{
+    display:inline-flex;
+    align-items:center;
+    gap:3px;
+    background:#fafbfd;
+    border:1px solid transparent;
+    border-radius:4px;
+    padding-right:5px;
+  }
+  .pct-input-wrap input.cell-input{
+    width:46px;
+    background:transparent;
+    border:none;
+    padding-right:2px;
+  }
+  .pct-input-wrap input.cell-input:focus{
+    outline:none;
+    background:transparent;
+  }
+  .pct-input-wrap:has(input:focus){ border-color:var(--blue-600); background:#fff; }
+  .pct-suffix{
+    font-size:12px;
+    font-weight:600;
+    color:var(--ink-soft);
+  }
+  .add-obra-row{ margin-top:10px; }
+  .formula-help{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-top:12px;
+  }
+  .formula-help summary{ cursor:pointer; font-weight:600; color:var(--blue-700); }
+  .formula-help ul{ margin:8px 0 0; padding-left:18px; line-height:1.6; }
+
+  table.results-table{ border-collapse:collapse; width:100%; }
+  table.results-table th, table.results-table td{
+    border-bottom:1px solid var(--line);
+    padding:8px 10px;
+    font-size:13px;
+    text-align:center;
+  }
+  table.results-table th{
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+  }
+  table.results-table td:nth-child(2){ text-align:left; font-weight:600; }
+  table.results-table tr:hover{ background:#f7f9fc; cursor:pointer; }
+  table.results-table tr.row-selected{ background:var(--blue-100); }
+  .trend{ font-weight:700; }
+  .trend.up{ color:var(--green); }
+  .trend.down{ color:var(--red); }
+  .trend.same{ color:var(--amber); }
+  .trend.none{ color:#c3c8d1; }
+  select.trend-select{
+    font-size:13px;
+    font-weight:700;
+    padding:4px 6px;
+    border-radius:6px;
+    border:1px solid var(--line);
+    background:#fff;
+    cursor:pointer;
+  }
+  select.trend-select.v-up{ color:var(--green); border-color:var(--green); }
+  select.trend-select.v-down{ color:var(--red); border-color:var(--red); }
+  select.trend-select.v-same{ color:var(--amber); border-color:var(--amber); }
+  .trend-cell{ display:flex; align-items:center; justify-content:center; gap:8px; }
+
+  .chart-card .section-title{ justify-content:space-between; }
+  #chartCapture{
+    background:#fff;
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+    padding:6px;
+  }
+  .svg-wrap{ flex:1 1 480px; min-width:320px; }
+  svg.ios-svg{ width:100%; height:auto; display:block; }
+  .axis-title{ font-size:12px; font-weight:700; fill:var(--ink); letter-spacing:.5px; }
+  .axis-caption{ font-size:16px; font-weight:700; }
+  .axis-caption.blue{ fill:var(--blue-700); }
+  .axis-caption.red{ fill:var(--red); }
+  .axis-sub{ font-size:10px; fill:var(--ink-soft); }
+  .bubble-text{ font-size:11px; font-weight:700; fill:#fff; pointer-events:none; }
+  .bubble{ cursor:pointer; }
+  .bubble circle{ transition:fill .15s; }
+
+  .legend{ flex:0 0 210px; min-width:190px; display:flex; flex-direction:column; justify-content:center; align-self:center; }
+  .legend-title{ font-size:12.5px; font-weight:700; color:var(--blue-900); margin-bottom:8px; text-align:center; }
+  .legend-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
+  .legend-item{
+    display:flex; align-items:center; gap:7px;
+    padding:5px 7px; border-radius:6px; cursor:pointer;
+    font-size:12.5px; border:1px solid transparent;
+  }
+  .legend-item:hover{ background:#f5f7fb; }
+  .legend-item.active{ background:var(--blue-100); border-color:var(--blue-600); }
+  .legend-rank{ font-weight:700; color:var(--blue-900); width:20px; }
+  .legend-dot{ width:10px; height:10px; border-radius:50%; flex:0 0 auto; }
+  .legend-name{ flex:1; }
+  .link-btn{
+    margin-top:8px; background:none; border:none; color:var(--blue-700);
+    font-size:12px; text-decoration:underline; padding:0; text-align:left; cursor:pointer;
+  }
+
+  .toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:#fff; padding:10px 18px; border-radius:8px;
+    font-size:13px; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s;
+    max-width:90vw; text-align:center; z-index:50;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  @media (max-width:720px){
+    .topbar{ flex-direction:column; align-items:stretch; }
+    .topbar-actions{ justify-content:flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <div class="card topbar">
+    <div class="topbar-left">
+      <h1>Matriz IOS — Indicadores Proativos x Reativos</h1>
+      <p class="subtitle">Preencha os indicadores de cada obra e o gráfico é gerado automaticamente.</p>
+    </div>
+    <div class="topbar-actions">
+      <div>
+        <label class="field-label" for="referenciaInput">Referência (mês/ano)</label>
+        <input type="month" id="referenciaInput" class="ref-input">
+      </div>
+      <div>
+        <label class="field-label" for="historicoSelect">Histórico salvo neste navegador</label>
+        <div style="display:flex; gap:6px;">
+          <select id="historicoSelect" class="hist-select"></select>
+          <button class="small" id="btnCarregarHistorico">Carregar</button>
+          <button class="small ghost" id="btnExcluirHistorico">Excluir</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card topbar" style="align-items:center;">
+    <div class="topbar-actions">
+      <button id="btnNovoMes" class="ghost">↻ Iniciar novo mês (limpa valores)</button>
+      <button id="btnImportar" class="ghost">⭱ Importar mês (.xlsx)</button>
+      <button id="btnModelo" class="ghost">⭳ Baixar modelo (.xlsx)</button>
+      <input type="file" id="fileImportar" accept=".xlsx" style="display:none;">
+    </div>
+    <div class="topbar-actions">
+      <button id="btnBaixarDados" class="primary">⭳ Baixar dados do mês</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="section-title">Indicadores por obra
+      <span class="section-hint">ICL, FE, PR, DA e DNA: digite de 0 a 100 (o % já é fixo). DR, TR, TF e TG: digite como no Excel.</span>
+    </p>
+    <div class="table-scroll">
+      <div id="inputTableWrap"></div>
+    </div>
+    <div class="add-obra-row">
+      <button id="btnAddObra">+ Adicionar obra</button>
+    </div>
+    <details class="formula-help">
+      <summary>Ver regras de cálculo usadas</summary>
+      <ul>
+        <li><strong>ICL</strong> (preenchido em %): se ≥ 80% → 1,00 · senão → o próprio valor (ex: 60% → 0,60)</li>
+        <li><strong>FE</strong> (preenchido em %): se ≥ 80% → 1,00 · senão → o próprio valor</li>
+        <li><strong>DR</strong> (valor direto, como no Excel): se ≥ 0,5 → 1,00 · senão → o próprio valor</li>
+        <li><strong>TR</strong> (valor direto, como no Excel): se ≥ 0,5 → 1,00 · senão → o próprio valor</li>
+        <li><strong>PR</strong> (preenchido em %): se ≥ 75% → 1,00 · senão → o próprio valor</li>
+        <li><strong>PROATIVO</strong> = soma dos 5 itens acima (máx. 5,00)</li>
+        <li><strong>DA</strong> (preenchido em %): se ≥ 30% → 1,25 · senão → valor × 1,25 ÷ 0,3</li>
+        <li><strong>DNA</strong> (preenchido em %) = valor × 1,25</li>
+        <li><strong>TF</strong> e <strong>TG</strong> (valor direto, como no Excel): se = 0 → 0 · senão → 1,25</li>
+        <li><strong>REATIVO</strong> = soma dos 4 itens acima (máx. 5,00)</li>
+        <li><strong>IOS</strong> = PROATIVO × (5 − REATIVO)</li>
+      </ul>
+    </details>
+  </div>
+
+  <div class="card">
+    <p class="section-title">Resultado calculado
+      <span class="section-hint">A tendência compara automaticamente com o mês mais recente salvo no histórico — você pode forçar manualmente na coluna abaixo.</span>
+    </p>
+    <div id="resultsTableWrap"></div>
+  </div>
+
+  <div class="card chart-card">
+    <p class="section-title">Gráfico
+      <span></span>
+    </p>
+    <div id="chartCapture">
+      <div class="svg-wrap" id="svgWrap"></div>
+      <div class="legend" id="legendWrap"></div>
+    </div>
+    <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button id="btnCopiarImagem" class="primary">⧉ Copiar gráfico (para colar na apresentação)</button>
+      <button id="btnBaixarImagem" class="ghost">⭳ Baixar imagem PNG</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+
+  const INDICATORS = [
+    {key:'ICL', label:'ICL', grupo:'proativo', limite:0.8, isPercent:true},
+    {key:'FE',  label:'FE',  grupo:'proativo', limite:0.8, isPercent:true},
+    {key:'DR',  label:'DR',  grupo:'proativo', limite:0.5},
+    {key:'TR',  label:'TR',  grupo:'proativo', limite:0.5},
+    {key:'PR',  label:'PR',  grupo:'proativo', limite:0.75, isPercent:true},
+    {key:'DA',  label:'DA',  grupo:'reativo', isPercent:true},
+    {key:'DNA', label:'DNA', grupo:'reativo', isPercent:true},
+    {key:'TF',  label:'TF',  grupo:'reativo'},
+    {key:'TG',  label:'TG',  grupo:'reativo'},
+  ];
+  const HISTORY_KEY = 'iosHistorico_v1';
+
+  function sampleState(){
+    const obras = [
+      {id:'o1', nome:'LT Nova Era 230kV'},
+      {id:'o2', nome:'LT Nova Era 500kV'},
+      {id:'o3', nome:'BAYS'},
+      {id:'o4', nome:'LTTNG CS'},
+      {id:'o5', nome:'LT JNB'},
+      {id:'o6', nome:'CE Diana'},
+      {id:'o7', nome:'LT Porto Ferreira'},
+    ];
+    const dados = {
+      o1:{ICL:'0',FE:'0',DR:'0',TR:'0',PR:'0',DA:'0',DNA:'0',TF:'0',TG:'0'},
+      o2:{ICL:'0',FE:'0',DR:'0',TR:'0',PR:'0',DA:'0',DNA:'0',TF:'0',TG:'0'},
+      o3:{ICL:'0',FE:'0',DR:'0',TR:'0',PR:'0',DA:'0',DNA:'0',TF:'0',TG:'0'},
+      o4:{ICL:'0',FE:'0',DR:'0',TR:'0',PR:'0',DA:'0',DNA:'0',TF:'0',TG:'0'},
+      o5:{ICL:'0',FE:'0',DR:'0',TR:'0',PR:'0',DA:'0',DNA:'0',TF:'0',TG:'0'},
+      o6:{ICL:'0',FE:'0',DR:'0',TR:'0',PR:'0',DA:'0',DNA:'0',TF:'0',TG:'0'},
+      o7:{ICL:'0',FE:'0',DR:'0',TR:'0',PR:'0',DA:'0',DNA:'0',TF:'0',TG:'0'},
+    };
+    const tendencia = {o1:'', o2:'', o3:'', o4:'', o5:'', o6:'', o7:''};
+    return {referencia:'', obras, dados, tendencia, filtro:null};
+  }
+
+  function emptyDados(){
+    const d={}; INDICATORS.forEach(i=>d[i.key]=''); return d;
+  }
+
+  let state = sampleState();
+
+  // ---------- helpers ----------
+  function parseNum(raw){
+    if(raw===undefined||raw===null) return 0;
+    let s=String(raw).trim();
+    if(s==='') return 0;
+    const isPct = s.indexOf('%')!==-1;
+    s = s.replace('%','').trim();
+    if(s.indexOf(',')!==-1){ s = s.replace(/\./g,'').replace(',', '.'); }
+    let n = parseFloat(s.replace(/[^0-9.\-]/g,''));
+    if(isNaN(n)) n=0;
+    if(isPct) n = n/100;
+    return n;
+  }
+  // Para ICL, FE, PR, DA e DNA: o campo é preenchido de 0 a 100 (o "%" já é fixo ao lado do input),
+  // então o número digitado é sempre dividido por 100, com ou sem o símbolo % junto ao texto.
+  function parsePercentInput(raw){
+    if(raw===undefined||raw===null) return 0;
+    let s=String(raw).trim();
+    if(s==='') return 0;
+    s = s.replace('%','').trim();
+    if(s.indexOf(',')!==-1){ s = s.replace(/\./g,'').replace(',', '.'); }
+    let n = parseFloat(s.replace(/[^0-9.\-]/g,''));
+    if(isNaN(n)) n=0;
+    return n/100;
+  }
+  function formatNum(n, dec){
+    dec = dec===undefined?2:dec;
+    return (n||0).toLocaleString('pt-BR',{minimumFractionDigits:dec, maximumFractionDigits:dec});
+  }
+  function escapeHtml(s){
+    return String(s===undefined||s===null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function slug(s){
+    return String(s||'mes').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+  }
+  function toast(msg, ms){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(()=> t.classList.remove('show'), ms||3200);
+  }
+  const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  // input[type=month] usa o formato "AAAA-MM"; a referência do app é exibida como "Mês/Ano"
+  function monthInputToReferencia(value){
+    if(!value) return '';
+    const parts = String(value).split('-');
+    if(parts.length!==2) return '';
+    const y = parts[0], idx = parseInt(parts[1],10)-1;
+    if(idx<0 || idx>11 || !/^\d{4}$/.test(y)) return '';
+    return `${MESES_PT[idx]}/${y}`;
+  }
+  function referenciaToMonthInput(ref){
+    if(!ref) return '';
+    const parts = String(ref).split('/');
+    if(parts.length!==2) return '';
+    const idx = MESES_PT.findIndex(m=> m.toLowerCase()===parts[0].trim().toLowerCase());
+    const y = parts[1].trim();
+    if(idx===-1 || !/^\d{4}$/.test(y)) return '';
+    return `${y}-${String(idx+1).padStart(2,'0')}`;
+  }
+  function setReferenciaUI(ref){
+    document.getElementById('referenciaInput').value = referenciaToMonthInput(ref);
+  }
+
+  // ---------- compute ----------
+  function computeAllFor(obras, dados){
+    const results = {};
+    obras.forEach(o=>{
+      const raw = dados[o.id] || {};
+      const parsed = {}; const scores = {};
+      let PROATIVO=0, REATIVO=0;
+      INDICATORS.forEach(ind=>{
+        const v = ind.isPercent ? parsePercentInput(raw[ind.key]) : parseNum(raw[ind.key]);
+        parsed[ind.key]=v;
+        let s;
+        if(ind.grupo==='proativo'){
+          s = v>=ind.limite ? 1 : v;
+          PROATIVO += s;
+        } else {
+          if(ind.key==='DA') s = v>=0.3 ? 1.25 : (v*1.25/0.3);
+          else if(ind.key==='DNA') s = v*1.25;
+          else s = v===0 ? 0 : 1.25; // TF, TG
+          REATIVO += s;
+        }
+        scores[ind.key]=s;
+      });
+      const IOS = PROATIVO*(5-REATIVO);
+      results[o.id] = {parsed, scores, PROATIVO, REATIVO, IOS};
+    });
+    const ordered = [...obras].sort((a,b)=> results[b.id].IOS - results[a.id].IOS);
+    ordered.forEach((o,i)=>{ results[o.id].rank = i+1; });
+    return results;
+  }
+  function computeAll(){ return computeAllFor(state.obras, state.dados); }
+
+  // ---------- history ----------
+  function loadHistory(){
+    try{ return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }catch(e){ return []; }
+  }
+  function saveHistoryEntry(entry){
+    let hist = loadHistory().filter(h=>h.referencia!==entry.referencia);
+    hist.push(entry);
+    hist.sort((a,b)=>b.savedAt-a.savedAt);
+    hist = hist.slice(0,36);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
+  }
+  function deleteHistoryEntry(ref){
+    const hist = loadHistory().filter(h=>h.referencia!==ref);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
+  }
+  function getComparisonEntry(){
+    const hist = loadHistory().filter(h=>h.referencia && h.referencia!==state.referencia);
+    if(!hist.length) return null;
+    hist.sort((a,b)=>b.savedAt-a.savedAt);
+    return hist[0];
+  }
+  // Compara o ranking atual com o do mês mais recente salvo no histórico (obras casadas pelo nome)
+  function computeAutoTrendMap(currentResults){
+    const map = {};
+    const prev = getComparisonEntry();
+    if(!prev) return map;
+    const prevResults = computeAllFor(prev.obras, prev.dados);
+    const prevRankByName = {};
+    prev.obras.forEach(o=>{ prevRankByName[String(o.nome).trim().toLowerCase()] = prevResults[o.id].rank; });
+    state.obras.forEach(o=>{
+      const key = String(o.nome).trim().toLowerCase();
+      if(prevRankByName[key]!==undefined){
+        const pr = prevRankByName[key], cr = currentResults[o.id].rank;
+        map[o.id] = cr<pr ? 'up' : (cr>pr ? 'down' : 'same');
+      }
+    });
+    return map;
+  }
+  // Resolve a tendência efetiva de uma obra: override manual (se houver) ou automática por histórico
+  function resolveTrend(obraId, autoMap){
+    const manual = state.tendencia[obraId];
+    if(manual==='up'||manual==='down'||manual==='same') return {value:manual, auto:false};
+    if(manual==='none') return {value:null, auto:false};
+    return {value: autoMap[obraId] || null, auto:true};
+  }
+  function trendBadgeHtml(resolved){
+    if(resolved.value==='up') return '<span class="trend up" title="'+(resolved.auto?'Automático':'Manual')+'">▲</span>';
+    if(resolved.value==='down') return '<span class="trend down" title="'+(resolved.auto?'Automático':'Manual')+'">▼</span>';
+    if(resolved.value==='same') return '<span class="trend same" title="'+(resolved.auto?'Automático':'Manual')+'">＝</span>';
+    return '<span class="trend none" title="Sem histórico para comparar">—</span>';
+  }
+  // ---------- render: input table (rebuilt only on structural change) ----------
+  function renderInputTable(){
+    const proativos = INDICATORS.filter(i=>i.grupo==='proativo');
+    const reativos = INDICATORS.filter(i=>i.grupo==='reativo');
+    let html = '<table class="indicator-table"><thead><tr><th class="row-label-col">Obra</th>';
+    state.obras.forEach(o=>{
+      html += `<th><div class="obra-head"><input type="text" class="obra-name-input" data-obra="${o.id}" value="${escapeHtml(o.nome)}"><button type="button" class="remove-obra-btn" data-remove="${o.id}" title="Remover obra">×</button></div></th>`;
+    });
+    html += '</tr></thead><tbody>';
+    html += `<tr class="group-row"><td colspan="${state.obras.length+1}">Proativos <span>quanto maior, melhor</span></td></tr>`;
+    proativos.forEach(ind=>{ html += rowHtml(ind); });
+    html += `<tr class="group-row"><td colspan="${state.obras.length+1}">Reativos <span>quanto maior, pior</span></td></tr>`;
+    reativos.forEach(ind=>{ html += rowHtml(ind); });
+    html += '</tbody></table>';
+    document.getElementById('inputTableWrap').innerHTML = html;
+
+    function rowHtml(ind){
+      let r = `<tr><td class="row-label">${ind.label}</td>`;
+      state.obras.forEach(o=>{
+        const val = (state.dados[o.id] && state.dados[o.id][ind.key]) || '';
+        const input = `<input type="text" inputmode="decimal" class="cell-input" data-obra="${o.id}" data-key="${ind.key}" value="${escapeHtml(val)}" placeholder="0">`;
+        if(ind.isPercent){
+          r += `<td><span class="pct-input-wrap">${input}<span class="pct-suffix">%</span></span></td>`;
+        } else {
+          r += `<td>${input}</td>`;
+        }
+      });
+      r += '</tr>';
+      return r;
+    }
+  }
+
+  // ---------- render: results table ----------
+  const TREND_OPTIONS = [
+    {value:'', label:'Automático'},
+    {value:'up', label:'▲ Subiu'},
+    {value:'down', label:'▼ Desceu'},
+    {value:'same', label:'＝ Igual'},
+    {value:'none', label:'— Sem info'},
+  ];
+  function trendSelectHtml(obraId){
+    const current = state.tendencia[obraId] || '';
+    const cls = current==='up' ? 'v-up' : current==='down' ? 'v-down' : current==='same' ? 'v-same' : '';
+    const opts = TREND_OPTIONS.map(o=>`<option value="${o.value}" ${o.value===current?'selected':''}>${o.label}</option>`).join('');
+    return `<select class="trend-select ${cls}" data-obra-trend="${obraId}">${opts}</select>`;
+  }
+  function renderResults(results, autoMap){
+    const rows = [...state.obras].sort((a,b)=>results[a.id].rank-results[b.id].rank);
+    let html = '<table class="results-table"><thead><tr><th>#</th><th>Obra</th><th>Proativo</th><th>Reativo</th><th>IOS</th><th>Tendência</th></tr></thead><tbody>';
+    rows.forEach(o=>{
+      const r = results[o.id];
+      const resolved = resolveTrend(o.id, autoMap);
+      html += `<tr class="${state.filtro===o.id?'row-selected':''}" data-obra-row="${o.id}">`
+        + `<td>${r.rank}º</td><td>${escapeHtml(o.nome)}</td>`
+        + `<td>${formatNum(r.PROATIVO)}</td><td>${formatNum(r.REATIVO)}</td>`
+        + `<td><strong>${formatNum(r.IOS)}</strong></td>`
+        + `<td class="trend-cell">${trendSelectHtml(o.id)} ${trendBadgeHtml(resolved)}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    const wrap = document.getElementById('resultsTableWrap');
+    wrap.innerHTML = html;
+    wrap.querySelectorAll('tr[data-obra-row]').forEach(tr=>{
+      tr.addEventListener('click', (e)=>{
+        if(e.target.closest('select')) return;
+        const id = tr.getAttribute('data-obra-row');
+        state.filtro = (state.filtro===id) ? null : id;
+        updateComputed();
+      });
+    });
+    wrap.querySelectorAll('.trend-select').forEach(sel=>{
+      sel.addEventListener('click', (e)=> e.stopPropagation());
+      sel.addEventListener('change', (e)=>{
+        const id = e.target.getAttribute('data-obra-trend');
+        state.tendencia[id] = e.target.value || '';
+        updateComputed();
+      });
+    });
+  }
+
+  // ---------- render: chart ----------
+  function renderChart(results, autoMap){
+    const domainMax = 5;
+    const plot = {left:118, right:560, top:34, bottom:380};
+    const w = plot.right-plot.left, h = plot.bottom-plot.top;
+    const midX = plot.left + w/2, midY = plot.top + h/2;
+    function xPix(reativo){ const frac=(domainMax-Math.min(reativo,domainMax))/domainMax; return plot.left + frac*w; }
+    function yPix(proativo){ const frac=Math.min(proativo,domainMax)/domainMax; return plot.bottom - frac*h; }
+
+    let svg = `<svg viewBox="0 0 640 500" class="ios-svg" xmlns="http://www.w3.org/2000/svg">`;
+    svg += `<rect x="${plot.left}" y="${plot.top}" width="${w/2}" height="${h/2}" fill="var(--quad-mixed)"/>`;
+    svg += `<rect x="${midX}" y="${plot.top}" width="${w/2}" height="${h/2}" fill="var(--quad-best)"/>`;
+    svg += `<rect x="${plot.left}" y="${midY}" width="${w/2}" height="${h/2}" fill="var(--quad-worst)"/>`;
+    svg += `<rect x="${midX}" y="${midY}" width="${w/2}" height="${h/2}" fill="var(--quad-mixed)"/>`;
+    svg += `<line x1="${midX}" y1="${plot.top}" x2="${midX}" y2="${plot.bottom}" stroke="#ffffff" stroke-width="2"/>`;
+    svg += `<line x1="${plot.left}" y1="${midY}" x2="${plot.right}" y2="${midY}" stroke="#ffffff" stroke-width="2"/>`;
+    svg += `<rect x="${plot.left}" y="${plot.top}" width="${w}" height="${h}" fill="none" stroke="#c7ccd6" stroke-width="1.25"/>`;
+
+    // Y axis (proativo) — título e legenda rotacionados à esquerda, ALTO/BAIXO numa coluna própria
+    svg += `<text class="axis-title" transform="rotate(-90 16 ${plot.top+h/2})" x="16" y="${plot.top+h/2}" text-anchor="middle">INDICADORES PROATIVOS</text>`;
+    svg += `<text class="axis-sub" transform="rotate(-90 34 ${plot.top+h/2})" x="34" y="${plot.top+h/2}" text-anchor="middle">(ICL, FE, DR, TR, PR)</text>`;
+    svg += `<text class="axis-caption blue" x="80" y="${plot.top+8}" text-anchor="middle">ALTO</text>`;
+    svg += `<text class="axis-caption blue" x="80" y="${plot.bottom+16}" text-anchor="middle">BAIXO</text>`;
+    svg += `<line x1="80" y1="${plot.top+14}" x2="80" y2="${plot.bottom-14}" stroke="var(--blue-700)" stroke-width="1.5"/>`;
+    svg += `<line x1="76" y1="${plot.top+14}" x2="84" y2="${plot.top+14}" stroke="var(--blue-700)" stroke-width="1.5"/>`;
+    svg += `<line x1="76" y1="${plot.bottom-14}" x2="84" y2="${plot.bottom-14}" stroke="var(--blue-700)" stroke-width="1.5"/>`;
+
+    // X axis (reativo) — bracket abaixo do gráfico, ALTO/BAIXO nas pontas, título por último
+    svg += `<line x1="${plot.left+2}" y1="392" x2="${plot.right-2}" y2="392" stroke="var(--red)" stroke-width="1.5"/>`;
+    svg += `<line x1="${plot.left+2}" y1="388" x2="${plot.left+2}" y2="396" stroke="var(--red)" stroke-width="1.5"/>`;
+    svg += `<line x1="${plot.right-2}" y1="388" x2="${plot.right-2}" y2="396" stroke="var(--red)" stroke-width="1.5"/>`;
+    svg += `<text class="axis-caption red" x="${plot.left}" y="412" text-anchor="start">ALTO</text>`;
+    svg += `<text class="axis-caption red" x="${plot.right}" y="412" text-anchor="end">BAIXO</text>`;
+    svg += `<text class="axis-sub" x="${plot.left+w/2}" y="436" text-anchor="middle">(DA, DNA, TF, TG)</text>`;
+    svg += `<text class="axis-title" x="${plot.left+w/2}" y="454" text-anchor="middle">INDICADORES REATIVOS</text>`;
+
+    state.obras.forEach(o=>{
+      const r = results[o.id];
+      const cx = xPix(r.REATIVO), cy = yPix(r.PROATIVO);
+      const dimmed = state.filtro && state.filtro!==o.id;
+      const fill = dimmed ? 'var(--bubble-gray)' : 'var(--bubble-blue)';
+      svg += `<g class="bubble" data-obra="${o.id}"><circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="14" fill="${fill}" stroke="#ffffff" stroke-width="2"/>`
+        + `<text class="bubble-text" x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dy="0.32em">${r.rank}</text></g>`;
+    });
+    svg += '</svg>';
+    document.getElementById('svgWrap').innerHTML = svg;
+
+    document.querySelectorAll('#svgWrap .bubble').forEach(g=>{
+      g.addEventListener('click', ()=>{
+        const id = g.getAttribute('data-obra');
+        state.filtro = (state.filtro===id) ? null : id;
+        updateComputed();
+      });
+    });
+
+    // legend
+    const rows = [...state.obras].sort((a,b)=>results[a.id].rank-results[b.id].rank);
+    let legend = `<div class="legend-title">Ranking IOS — ${escapeHtml(state.referencia||'sem referência')}</div><ul class="legend-list">`;
+    rows.forEach(o=>{
+      const r = results[o.id];
+      const trendHtml = trendBadgeHtml(resolveTrend(o.id, autoMap));
+      const dimmed = state.filtro && state.filtro!==o.id;
+      const dotColor = dimmed ? 'var(--bubble-gray)' : 'var(--bubble-blue)';
+      legend += `<li class="legend-item ${state.filtro===o.id?'active':''}" data-obra="${o.id}">`
+        + `<span class="legend-rank">${r.rank}º</span>`
+        + `<span class="legend-dot" style="background:${dotColor}"></span>`
+        + `<span class="legend-name">${escapeHtml(o.nome)}</span>`
+        + `<span class="legend-trend">${trendHtml}</span></li>`;
+    });
+    legend += '</ul>';
+    if(state.filtro) legend += '<button type="button" class="link-btn" id="btnLimparFiltro">Limpar destaque</button>';
+    document.getElementById('legendWrap').innerHTML = legend;
+
+    document.querySelectorAll('#legendWrap .legend-item').forEach(li=>{
+      li.addEventListener('click', ()=>{
+        const id = li.getAttribute('data-obra');
+        state.filtro = (state.filtro===id) ? null : id;
+        updateComputed();
+      });
+    });
+    const clearBtn = document.getElementById('btnLimparFiltro');
+    if(clearBtn) clearBtn.addEventListener('click', (e)=>{ e.stopPropagation(); state.filtro=null; updateComputed(); });
+  }
+
+  function updateComputed(){
+    const results = computeAll();
+    const autoMap = computeAutoTrendMap(results);
+    renderResults(results, autoMap);
+    renderChart(results, autoMap);
+  }
+
+  // ---------- obra management ----------
+  function addObra(){
+    const id = 'o'+Date.now();
+    state.obras.push({id, nome:'Nova obra'});
+    state.dados[id] = emptyDados();
+    state.tendencia[id] = '';
+    renderInputTable();
+    updateComputed();
+  }
+  function removeObra(id){
+    if(state.obras.length<=1){ toast('Mantenha ao menos uma obra.'); return; }
+    state.obras = state.obras.filter(o=>o.id!==id);
+    delete state.dados[id];
+    delete state.tendencia[id];
+    if(state.filtro===id) state.filtro=null;
+    renderInputTable();
+    updateComputed();
+  }
+
+  // ---------- export / import (XLSX) ----------
+  function baixarModelo(){
+    const obrasModelo = state.obras.length ? state.obras.map(o=>o.nome) : ['Obra 1','Obra 2','Obra 3'];
+    const indRows = [['Indicador', ...obrasModelo]];
+    INDICATORS.forEach(ind=>{
+      const row = [ind.label + (ind.isPercent ? ' (%)' : '')];
+      obrasModelo.forEach(()=> row.push('0'));
+      indRows.push(row);
+    });
+    const wsInd = XLSX.utils.aoa_to_sheet(indRows);
+    const wsInfo = XLSX.utils.aoa_to_sheet([
+      ['Referência', ''],
+      ['Instruções', 'Preencha os indicadores de cada obra nesta aba "Indicadores" (pode adicionar ou remover colunas de obra). ICL, FE, PR, DA e DNA: preencha de 0 a 100 (%). DR, TR, TF e TG: preencha o valor direto, como no Excel. Depois, importe este arquivo pelo botão "Importar mês (.xlsx)".'],
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, wsInd, 'Indicadores');
+    XLSX.utils.book_append_sheet(wb, wsInfo, 'Info');
+    XLSX.writeFile(wb, 'Modelo_Matriz_IOS.xlsx');
+    toast('Modelo baixado. Preencha e importe pelo botão "Importar mês".');
+  }
+  function baixarDadosDoMes(){
+    if(!state.referencia.trim()){
+      toast('Preencha a referência do mês antes de baixar.');
+      document.getElementById('referenciaInput').focus();
+      return;
+    }
+    const results = computeAll();
+    const autoMap = computeAutoTrendMap(results);
+
+    const headerRow = ['Indicador', ...state.obras.map(o=>o.nome)];
+    const indRows = [headerRow];
+    INDICATORS.forEach(ind=>{
+      const row = [ind.label];
+      state.obras.forEach(o=> row.push((state.dados[o.id] && state.dados[o.id][ind.key]) || ''));
+      indRows.push(row);
+    });
+    const wsInd = XLSX.utils.aoa_to_sheet(indRows);
+
+    const ordered = [...state.obras].sort((a,b)=>results[a.id].rank-results[b.id].rank);
+    const resRows = [['Ranking','Obra','Proativo','Reativo','IOS','Tendencia','Origem']];
+    ordered.forEach(o=>{
+      const r = results[o.id];
+      const resolved = resolveTrend(o.id, autoMap);
+      const tLabel = resolved.value==='up' ? 'Subiu' : resolved.value==='down' ? 'Desceu' : resolved.value==='same' ? 'Igual' : '';
+      const origemLabel = resolved.auto ? 'Automático' : 'Manual';
+      resRows.push([r.rank, o.nome, Number(r.PROATIVO.toFixed(2)), Number(r.REATIVO.toFixed(2)), Number(r.IOS.toFixed(2)), tLabel, origemLabel]);
+    });
+    const wsRes = XLSX.utils.aoa_to_sheet(resRows);
+
+    const wsInfo = XLSX.utils.aoa_to_sheet([
+      ['Referência', state.referencia],
+      ['Gerado em', new Date().toLocaleString('pt-BR')],
+    ]);
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, wsInd, 'Indicadores');
+    XLSX.utils.book_append_sheet(wb, wsRes, 'Resultados');
+    XLSX.utils.book_append_sheet(wb, wsInfo, 'Info');
+    XLSX.writeFile(wb, `IOS_${slug(state.referencia)}.xlsx`);
+
+    saveHistoryEntry({referencia: state.referencia, savedAt: Date.now(), obras: state.obras, dados: state.dados, tendencia: state.tendencia});
+    toast('Dados salvos no histórico deste navegador e baixados em .xlsx.');
+    renderHistoryList();
+  }
+  function downloadBlob(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }
+  function importarArquivo(file){
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      try{
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, {type:'array'});
+        const wsInd = wb.Sheets['Indicadores'];
+        if(!wsInd) throw new Error('sem aba Indicadores');
+        const aoa = XLSX.utils.sheet_to_json(wsInd, {header:1, raw:false, defval:''});
+        const header = aoa[0] || [];
+        const obraNames = header.slice(1).map(String);
+        const novasObras = obraNames.map((nome,i)=>({id:'o'+(i+1)+'_'+Date.now(), nome: nome || ('Obra '+(i+1))}));
+        const novosDados = {};
+        novasObras.forEach(o=> novosDados[o.id] = emptyDados());
+        for(let r=1; r<aoa.length; r++){
+          const row = aoa[r];
+          if(!row || !row[0]) continue;
+          const key = String(row[0]).trim().toUpperCase().split(/[\s(]/)[0];
+          if(!INDICATORS.find(i=>i.key===key)) continue;
+          novasObras.forEach((o,idx)=>{
+            const val = row[idx+1];
+            novosDados[o.id][key] = (val===undefined || val===null) ? '' : String(val);
+          });
+        }
+
+        let referencia = '';
+        const wsInfo = wb.Sheets['Info'];
+        if(wsInfo){
+          const infoAoa = XLSX.utils.sheet_to_json(wsInfo, {header:1, raw:false, defval:''});
+          const linha = infoAoa.find(l=> String(l[0]||'').toLowerCase().indexOf('refer')!==-1);
+          if(linha) referencia = String(linha[1]||'');
+        }
+
+        const novaTendencia = {};
+        const wsRes = wb.Sheets['Resultados'];
+        if(wsRes){
+          const resAoa = XLSX.utils.sheet_to_json(wsRes, {header:1, raw:false, defval:''});
+          const headerRes = resAoa[0] || [];
+          const idxObra = headerRes.findIndex(h=> String(h).toLowerCase().indexOf('obra')!==-1);
+          const idxTend = headerRes.findIndex(h=> String(h).toLowerCase().indexOf('tend')!==-1);
+          const idxOrigem = headerRes.findIndex(h=> String(h).toLowerCase().indexOf('origem')!==-1);
+          if(idxObra>-1 && idxTend>-1){
+            for(let r=1; r<resAoa.length; r++){
+              const row = resAoa[r];
+              if(!row || !row[idxObra]) continue;
+              const nome = String(row[idxObra]).trim();
+              const obra = novasObras.find(o=>o.nome.trim()===nome);
+              if(obra){
+                const origem = idxOrigem>-1 ? String(row[idxOrigem]||'').toLowerCase() : '';
+                if(origem.indexOf('manual')!==-1){
+                  const t = String(row[idxTend]||'').toLowerCase();
+                  if(t.indexOf('subiu')!==-1) novaTendencia[obra.id]='up';
+                  else if(t.indexOf('desceu')!==-1) novaTendencia[obra.id]='down';
+                  else if(t.indexOf('igual')!==-1) novaTendencia[obra.id]='same';
+                  else novaTendencia[obra.id]='none';
+                } else {
+                  novaTendencia[obra.id]=''; // automático: recalcula contra o histórico
+                }
+              }
+            }
+          }
+        }
+
+        state.referencia = referencia;
+        state.obras = novasObras;
+        state.dados = novosDados;
+        state.tendencia = novaTendencia;
+        state.filtro = null;
+        document.getElementById('referenciaInput').value = referenciaToMonthInput(state.referencia);
+        saveHistoryEntry({referencia: state.referencia, savedAt: Date.now(), obras: state.obras, dados: state.dados, tendencia: state.tendencia});
+        renderInputTable();
+        updateComputed();
+        renderHistoryList();
+        toast('Mês importado com sucesso.');
+      }catch(err){
+        toast('Não consegui ler esse arquivo. Confira se é um .xlsx exportado por este app.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // ---------- history UI ----------
+  function renderHistoryList(){
+    const hist = loadHistory().sort((a,b)=>b.savedAt-a.savedAt);
+    const sel = document.getElementById('historicoSelect');
+    sel.innerHTML = hist.length
+      ? hist.map(h=>`<option value="${escapeHtml(h.referencia)}">${escapeHtml(h.referencia)} — ${new Date(h.savedAt).toLocaleDateString('pt-BR')}</option>`).join('')
+      : `<option value="">Nenhum mês salvo ainda</option>`;
+  }
+  function carregarHistorico(){
+    const ref = document.getElementById('historicoSelect').value;
+    if(!ref) return;
+    const entry = loadHistory().find(h=>h.referencia===ref);
+    if(!entry){ toast('Mês não encontrado.'); return; }
+    state.referencia = entry.referencia;
+    state.obras = entry.obras;
+    state.dados = entry.dados;
+    state.tendencia = entry.tendencia || {};
+    state.filtro = null;
+    document.getElementById('referenciaInput').value = referenciaToMonthInput(state.referencia);
+    renderInputTable();
+    updateComputed();
+    toast('Mês carregado.');
+  }
+  function excluirHistorico(){
+    const ref = document.getElementById('historicoSelect').value;
+    if(!ref) return;
+    if(confirm(`Excluir "${ref}" do histórico salvo neste navegador? (o arquivo .json já baixado não é afetado)`)){
+      deleteHistoryEntry(ref);
+      renderHistoryList();
+      toast('Removido do histórico.');
+    }
+  }
+
+  // ---------- copy / download image ----------
+  function gerarCanvas(){
+    return html2canvas(document.getElementById('chartCapture'), {backgroundColor:'#ffffff', scale:2});
+  }
+  function copiarGrafico(){
+    gerarCanvas().then(canvas=>{
+      canvas.toBlob(async (blob)=>{
+        try{
+          if(!navigator.clipboard || !window.ClipboardItem) throw new Error('sem clipboard API');
+          await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
+          toast('Gráfico copiado! Cole direto na apresentação com Ctrl+V.');
+        }catch(err){
+          downloadBlob(blob, `Grafico_IOS_${slug(state.referencia)}.png`);
+          toast('Este navegador não permite copiar direto de um arquivo local — a imagem foi baixada para você colar.');
+        }
+      });
+    }).catch(()=> toast('Erro ao gerar a imagem do gráfico.'));
+  }
+  function baixarImagem(){
+    gerarCanvas().then(canvas=>{
+      canvas.toBlob(blob=>{
+        downloadBlob(blob, `Grafico_IOS_${slug(state.referencia)}.png`);
+        toast('Imagem baixada.');
+      });
+    }).catch(()=> toast('Erro ao gerar a imagem do gráfico.'));
+  }
+
+  // ---------- new month ----------
+  function novoMes(){
+    if(!confirm('Isso limpa os valores digitados (mantém as obras). Deseja continuar? Se ainda não baixou os dados deste mês, cancele e baixe antes.')) return;
+    state.obras.forEach(o=>{ state.dados[o.id] = emptyDados(); state.tendencia[o.id] = ''; });
+    state.referencia = '';
+    state.filtro = null;
+    document.getElementById('referenciaInput').value = '';
+    renderInputTable();
+    updateComputed();
+    toast('Pronto para o novo mês.');
+  }
+
+  // ---------- init ----------
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const hist = loadHistory();
+    if(hist.length){
+      hist.sort((a,b)=>b.savedAt-a.savedAt);
+      const latest = hist[0];
+      state = {referencia: latest.referencia, obras: latest.obras, dados: latest.dados, tendencia: latest.tendencia || {}, filtro:null};
+    }
+    document.getElementById('referenciaInput').value = referenciaToMonthInput(state.referencia);
+
+    renderInputTable();
+    updateComputed();
+    renderHistoryList();
+
+    document.getElementById('inputTableWrap').addEventListener('input', (e)=>{
+      if(e.target.classList.contains('cell-input')){
+        const obra = e.target.dataset.obra, key = e.target.dataset.key;
+        state.dados[obra][key] = e.target.value;
+        updateComputed();
+      } else if(e.target.classList.contains('obra-name-input')){
+        const obra = e.target.dataset.obra;
+        const o = state.obras.find(x=>x.id===obra);
+        if(o) o.nome = e.target.value;
+        updateComputed();
+      }
+    });
+    document.getElementById('inputTableWrap').addEventListener('click', (e)=>{
+      if(e.target.classList.contains('remove-obra-btn')){
+        removeObra(e.target.dataset.remove);
+      }
+    });
+    document.getElementById('btnAddObra').addEventListener('click', addObra);
+    document.getElementById('referenciaInput').addEventListener('change', (e)=>{
+      state.referencia = monthInputToReferencia(e.target.value);
+      updateComputed();
+    });
+    document.getElementById('btnBaixarDados').addEventListener('click', baixarDadosDoMes);
+    document.getElementById('btnModelo').addEventListener('click', baixarModelo);
+    document.getElementById('btnImportar').addEventListener('click', ()=> document.getElementById('fileImportar').click());
+    document.getElementById('fileImportar').addEventListener('change', (e)=>{
+      if(e.target.files && e.target.files[0]) importarArquivo(e.target.files[0]);
+      e.target.value = '';
+    });
+    document.getElementById('btnCarregarHistorico').addEventListener('click', carregarHistorico);
+    document.getElementById('btnExcluirHistorico').addEventListener('click', excluirHistorico);
+    document.getElementById('btnNovoMes').addEventListener('click', novoMes);
+    document.getElementById('btnCopiarImagem').addEventListener('click', copiarGrafico);
+    document.getElementById('btnBaixarImagem').addEventListener('click', baixarImagem);
+  });
+
+})();
+</script>
+</body>
+</html>
