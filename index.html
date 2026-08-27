@@ -312,10 +312,45 @@
     .topbar{ flex-direction:column; align-items:stretch; }
     .topbar-actions{ justify-content:flex-start; }
   }
+
+  .tabs-card{ padding:10px 14px; }
+  .tabs{ display:flex; gap:8px; flex-wrap:wrap; }
+  button.tab-btn{ background:transparent; }
+  button.tab-btn.active{
+    background:var(--blue-600);
+    border-color:var(--blue-600);
+    color:#fff;
+  }
+
+  .tend-groups{ display:flex; flex-direction:column; gap:14px; }
+  .tend-group-title{
+    font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px;
+    color:#fff; background:var(--blue-900); padding:6px 10px; border-radius:6px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .tend-group-title span{ text-transform:none; font-weight:400; opacity:.8; letter-spacing:0; font-size:11px; }
+  .tend-grid{ display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }
+  .tend-item{
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    background:#f5f7fb; border:1px solid var(--line); border-radius:8px; padding:8px 6px; min-width:60px;
+  }
+  .tend-item label{ font-size:12px; font-weight:700; color:var(--blue-900); }
+  .tend-item input.cell-input{ width:48px; padding:4px 2px; }
+  .tend-item .pct-input-wrap{ background:transparent; padding-right:3px; }
+  .tend-item .pct-input-wrap input.cell-input{ width:34px; }
 </style>
 </head>
 <body>
 <div class="app-shell">
+
+  <div class="card tabs-card">
+    <div class="tabs">
+      <button type="button" class="tab-btn active" data-tab="consolidado">📅 Consolidado mensal</button>
+      <button type="button" class="tab-btn" data-tab="tendencia">📈 Tendência por obra</button>
+    </div>
+  </div>
+
+  <div id="tabConsolidado" class="tab-panel">
 
   <div class="card topbar">
     <div class="topbar-left">
@@ -399,6 +434,56 @@
     </div>
   </div>
 
+  </div>
+
+  <div id="tabTendencia" class="tab-panel" style="display:none;">
+
+    <div class="card topbar" style="align-items:flex-end;">
+      <div class="topbar-left">
+        <h1 style="font-size:18px;">Tendência por obra</h1>
+        <p class="subtitle">Avaliação avulsa para reuniões — não altera o consolidado mensal.</p>
+      </div>
+      <div class="topbar-actions">
+        <div>
+          <label class="field-label" for="tendObraSelect">Obra</label>
+          <select id="tendObraSelect" class="hist-select"></select>
+        </div>
+        <div>
+          <label class="field-label" for="tendCompararSelect">Comparar com o fechamento de</label>
+          <select id="tendCompararSelect" class="hist-select"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="section-title">Indicadores atuais / esperados
+        <span class="section-hint">Situação de hoje ou expectativa de fechamento — mesma regra de preenchimento do consolidado</span>
+      </p>
+      <div class="table-scroll">
+        <div id="tendInputWrap"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="section-title">Projeção</p>
+      <div id="tendResultWrap"></div>
+    </div>
+
+    <div class="card chart-card">
+      <p class="section-title">Tendência visual
+        <span></span>
+      </p>
+      <div id="tendChartCapture">
+        <div class="svg-wrap" id="tendSvgWrap"></div>
+      </div>
+      <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button id="btnCopiarImagemTend" class="primary">⧉ Copiar gráfico (para colar na apresentação)</button>
+        <button id="btnBaixarImagemTend" class="ghost">⭳ Baixar imagem PNG</button>
+      </div>
+    </div>
+
+  </div>
+
 </div>
 
 <div class="toast" id="toast"></div>
@@ -418,6 +503,7 @@
     {key:'TG',  label:'TG',  grupo:'reativo'},
   ];
   const HISTORY_KEY = 'iosHistorico_v1';
+  const TEND_DRAFT_KEY = 'iosTendenciaDraft_v1';
 
   function sampleState(){
     const obras = [
@@ -447,6 +533,7 @@
   }
 
   let state = sampleState();
+  let tendState = {obraId:null, dados:{}, compararRef:''};
 
   // ---------- helpers ----------
   function parseNum(raw){
@@ -675,13 +762,13 @@
   }
 
   // ---------- render: chart ----------
-  function renderChart(results, autoMap){
-    const domainMax = 5;
-    const plot = {left:118, right:560, top:34, bottom:380};
+  const DOMAIN_MAX = 5;
+  function quadrantPlot(){ return {left:118, right:560, top:34, bottom:380}; }
+  function quadrantXPix(plot, reativo){ const w=plot.right-plot.left; const frac=(DOMAIN_MAX-Math.min(reativo,DOMAIN_MAX))/DOMAIN_MAX; return plot.left + frac*w; }
+  function quadrantYPix(plot, proativo){ const h=plot.bottom-plot.top; const frac=Math.min(proativo,DOMAIN_MAX)/DOMAIN_MAX; return plot.bottom - frac*h; }
+  function quadrantChromeSvg(plot){
     const w = plot.right-plot.left, h = plot.bottom-plot.top;
     const midX = plot.left + w/2, midY = plot.top + h/2;
-    function xPix(reativo){ const frac=(domainMax-Math.min(reativo,domainMax))/domainMax; return plot.left + frac*w; }
-    function yPix(proativo){ const frac=Math.min(proativo,domainMax)/domainMax; return plot.bottom - frac*h; }
 
     let svg = `<svg viewBox="0 0 640 500" class="ios-svg" xmlns="http://www.w3.org/2000/svg">`;
     svg += `<rect x="${plot.left}" y="${plot.top}" width="${w/2}" height="${h/2}" fill="var(--quad-mixed)"/>`;
@@ -709,6 +796,15 @@
     svg += `<text class="axis-caption red" x="${plot.right}" y="412" text-anchor="end">BAIXO</text>`;
     svg += `<text class="axis-sub" x="${plot.left+w/2}" y="436" text-anchor="middle">(DA, DNA, TF, TG)</text>`;
     svg += `<text class="axis-title" x="${plot.left+w/2}" y="454" text-anchor="middle">INDICADORES REATIVOS</text>`;
+    return svg;
+  }
+
+  function renderChart(results, autoMap){
+    const plot = quadrantPlot();
+    function xPix(reativo){ return quadrantXPix(plot, reativo); }
+    function yPix(proativo){ return quadrantYPix(plot, proativo); }
+
+    let svg = quadrantChromeSvg(plot);
 
     state.obras.forEach(o=>{
       const r = results[o.id];
@@ -970,30 +1066,176 @@
   }
 
   // ---------- copy / download image ----------
-  function gerarCanvas(){
-    return html2canvas(document.getElementById('chartCapture'), {backgroundColor:'#ffffff', scale:2});
+  function gerarCanvas(containerId){
+    return html2canvas(document.getElementById(containerId), {backgroundColor:'#ffffff', scale:2});
   }
-  function copiarGrafico(){
-    gerarCanvas().then(canvas=>{
+  function copiarGrafico(containerId, filenamePrefix){
+    gerarCanvas(containerId).then(canvas=>{
       canvas.toBlob(async (blob)=>{
         try{
           if(!navigator.clipboard || !window.ClipboardItem) throw new Error('sem clipboard API');
           await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
           toast('Gráfico copiado! Cole direto na apresentação com Ctrl+V.');
         }catch(err){
-          downloadBlob(blob, `Grafico_IOS_${slug(state.referencia)}.png`);
+          downloadBlob(blob, `${filenamePrefix}.png`);
           toast('Este navegador não permite copiar direto de um arquivo local — a imagem foi baixada para você colar.');
         }
       });
     }).catch(()=> toast('Erro ao gerar a imagem do gráfico.'));
   }
-  function baixarImagem(){
-    gerarCanvas().then(canvas=>{
+  function baixarImagem(containerId, filenamePrefix){
+    gerarCanvas(containerId).then(canvas=>{
       canvas.toBlob(blob=>{
-        downloadBlob(blob, `Grafico_IOS_${slug(state.referencia)}.png`);
+        downloadBlob(blob, `${filenamePrefix}.png`);
         toast('Imagem baixada.');
       });
     }).catch(()=> toast('Erro ao gerar a imagem do gráfico.'));
+  }
+
+  // ---------- tendência por obra (aba separada, não altera o consolidado) ----------
+  function loadTendDraft(){
+    try{ return JSON.parse(localStorage.getItem(TEND_DRAFT_KEY)) || {obraId:null, dados:{}, compararRef:''}; }
+    catch(e){ return {obraId:null, dados:{}, compararRef:''}; }
+  }
+  function saveTendDraft(){
+    try{ localStorage.setItem(TEND_DRAFT_KEY, JSON.stringify(tendState)); }catch(e){}
+  }
+  function tendObraNome(){
+    const o = state.obras.find(x=>x.id===tendState.obraId);
+    return o ? o.nome : '';
+  }
+  function abreviarRef(ref){
+    const m = String(ref||'').match(/^([^\/]+)\/(\d{4})$/);
+    if(!m) return String(ref||'').slice(0,5);
+    const idx = MESES_PT.findIndex(mm=>mm.toLowerCase()===m[1].trim().toLowerCase());
+    const mesNum = idx>=0 ? String(idx+1).padStart(2,'0') : m[1].slice(0,2);
+    return `${mesNum}/${m[2].slice(2)}`;
+  }
+  function renderTendObraSelect(){
+    const sel = document.getElementById('tendObraSelect');
+    if(!state.obras.length){
+      sel.innerHTML = '<option value="">Nenhuma obra cadastrada no consolidado</option>';
+      tendState.obraId = null;
+      return;
+    }
+    if(!tendState.obraId || !state.obras.find(o=>o.id===tendState.obraId)){
+      tendState.obraId = state.obras[0].id;
+    }
+    sel.innerHTML = state.obras.map(o=>`<option value="${o.id}" ${o.id===tendState.obraId?'selected':''}>${escapeHtml(o.nome)}</option>`).join('');
+  }
+  function renderTendCompararSelect(){
+    const sel = document.getElementById('tendCompararSelect');
+    const hist = loadHistory().sort((a,b)=>b.savedAt-a.savedAt);
+    if(!hist.length){
+      sel.innerHTML = '<option value="">Nenhum mês salvo ainda</option>';
+      tendState.compararRef = '';
+      return;
+    }
+    if(!tendState.compararRef || !hist.find(h=>h.referencia===tendState.compararRef)){
+      tendState.compararRef = hist[0].referencia;
+    }
+    sel.innerHTML = hist.map(h=>`<option value="${escapeHtml(h.referencia)}" ${h.referencia===tendState.compararRef?'selected':''}>${escapeHtml(h.referencia)} — ${new Date(h.savedAt).toLocaleDateString('pt-BR')}</option>`).join('');
+  }
+  function renderTendInputTable(){
+    const proativos = INDICATORS.filter(i=>i.grupo==='proativo');
+    const reativos = INDICATORS.filter(i=>i.grupo==='reativo');
+    const dados = tendState.dados[tendState.obraId] || emptyDados();
+    let html = '<div class="tend-groups">';
+    html += groupHtml('Proativos', 'quanto maior, melhor', proativos);
+    html += groupHtml('Reativos', 'quanto maior, pior', reativos);
+    html += '</div>';
+    document.getElementById('tendInputWrap').innerHTML = html;
+
+    function groupHtml(title, hint, inds){
+      let g = `<div><div class="tend-group-title">${title} <span>${hint}</span></div><div class="tend-grid">`;
+      inds.forEach(ind=>{
+        const val = dados[ind.key] || '';
+        const input = `<input type="text" inputmode="decimal" class="cell-input" data-tend-key="${ind.key}" value="${escapeHtml(val)}" placeholder="0">`;
+        const field = ind.isPercent
+          ? `<span class="pct-input-wrap">${input}<span class="pct-suffix">%</span></span>`
+          : input;
+        g += `<div class="tend-item"><label>${ind.label}</label>${field}</div>`;
+      });
+      g += '</div></div>';
+      return g;
+    }
+  }
+  function tendCompute(){
+    if(!tendState.obraId) return null;
+    const nome = tendObraNome();
+    const dados = tendState.dados[tendState.obraId] || emptyDados();
+    const results = computeAllFor([{id:tendState.obraId, nome}], {[tendState.obraId]: dados});
+    const atual = results[tendState.obraId];
+
+    let anterior = null;
+    const ref = tendState.compararRef;
+    if(ref){
+      const hist = loadHistory().find(h=>h.referencia===ref);
+      if(hist){
+        const obraHist = (hist.obras||[]).find(o=>o.nome.trim()===nome.trim());
+        if(obraHist){
+          const rHist = computeAllFor([obraHist], hist.dados);
+          anterior = rHist[obraHist.id];
+        }
+      }
+    }
+    return {nome, atual, anterior, refLabel: ref};
+  }
+  function renderTendResults(calc){
+    const wrap = document.getElementById('tendResultWrap');
+    if(!calc){
+      wrap.innerHTML = '<p class="section-hint">Cadastre ao menos uma obra na aba Consolidado mensal.</p>';
+      return;
+    }
+    const {atual, anterior, refLabel} = calc;
+    let trendHtml = '<span class="trend none">— sem mês para comparar</span>';
+    if(anterior){
+      const diff = atual.IOS - anterior.IOS;
+      if(Math.abs(diff) < 0.01) trendHtml = '<span class="trend same">＝ estável</span>';
+      else if(diff > 0) trendHtml = `<span class="trend up">▲ melhorando (+${formatNum(diff)})</span>`;
+      else trendHtml = `<span class="trend down">▼ piorando (${formatNum(diff)})</span>`;
+    }
+    wrap.innerHTML = `<table class="results-table"><thead><tr>`
+      + `<th>Proativo</th><th>Reativo</th><th>IOS atual</th><th>IOS em ${anterior?escapeHtml(refLabel):'—'}</th><th>Tendência</th>`
+      + `</tr></thead><tbody><tr>`
+      + `<td>${formatNum(atual.PROATIVO)}</td><td>${formatNum(atual.REATIVO)}</td>`
+      + `<td><strong>${formatNum(atual.IOS)}</strong></td>`
+      + `<td>${anterior?formatNum(anterior.IOS):'—'}</td>`
+      + `<td>${trendHtml}</td>`
+      + `</tr></tbody></table>`;
+  }
+  function renderTendChart(calc){
+    const svgWrap = document.getElementById('tendSvgWrap');
+    if(!calc){ svgWrap.innerHTML=''; return; }
+    const plot = quadrantPlot();
+    const {atual, anterior, refLabel, nome} = calc;
+
+    let svg = quadrantChromeSvg(plot);
+    svg += `<defs><marker id="tendArrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--ink-soft)"/></marker></defs>`;
+
+    if(anterior){
+      const ax = quadrantXPix(plot, anterior.REATIVO), ay = quadrantYPix(plot, anterior.PROATIVO);
+      const bx = quadrantXPix(plot, atual.REATIVO), by = quadrantYPix(plot, atual.PROATIVO);
+      svg += `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="var(--ink-soft)" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#tendArrow)"/>`;
+      svg += `<g class="bubble"><circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="14" fill="var(--bubble-gray)" stroke="#fff" stroke-width="2"/>`
+        + `<text class="bubble-text" x="${ax.toFixed(1)}" y="${ay.toFixed(1)}" text-anchor="middle" dy="0.32em" style="font-size:8px;">${escapeHtml(abreviarRef(refLabel))}</text></g>`;
+    }
+    const bx = quadrantXPix(plot, atual.REATIVO), by = quadrantYPix(plot, atual.PROATIVO);
+    svg += `<g class="bubble"><circle cx="${bx.toFixed(1)}" cy="${by.toFixed(1)}" r="14" fill="var(--bubble-blue)" stroke="#fff" stroke-width="2"/>`
+      + `<text class="bubble-text" x="${bx.toFixed(1)}" y="${by.toFixed(1)}" text-anchor="middle" dy="0.32em" style="font-size:9.5px;">agora</text></g>`;
+
+    svg += `<text x="${plot.left}" y="20" text-anchor="start" style="font-size:13px; font-weight:700; fill:var(--blue-900);">${escapeHtml(nome)}</text>`;
+    svg += '</svg>';
+    svgWrap.innerHTML = svg;
+  }
+  function updateTendencia(){
+    renderTendObraSelect();
+    renderTendCompararSelect();
+    renderTendInputTable();
+    const calc = tendCompute();
+    renderTendResults(calc);
+    renderTendChart(calc);
+    saveTendDraft();
   }
 
   // ---------- new month ----------
@@ -1017,6 +1259,8 @@
       state = {referencia: latest.referencia, obras: latest.obras, dados: latest.dados, tendencia: latest.tendencia || {}, filtro:null};
     }
     document.getElementById('referenciaInput').value = referenciaToMonthInput(state.referencia);
+
+    tendState = loadTendDraft();
 
     renderInputTable();
     updateComputed();
@@ -1054,8 +1298,39 @@
     document.getElementById('btnCarregarHistorico').addEventListener('click', carregarHistorico);
     document.getElementById('btnExcluirHistorico').addEventListener('click', excluirHistorico);
     document.getElementById('btnNovoMes').addEventListener('click', novoMes);
-    document.getElementById('btnCopiarImagem').addEventListener('click', copiarGrafico);
-    document.getElementById('btnBaixarImagem').addEventListener('click', baixarImagem);
+    document.getElementById('btnCopiarImagem').addEventListener('click', ()=> copiarGrafico('chartCapture', `Grafico_IOS_${slug(state.referencia)}`));
+    document.getElementById('btnBaixarImagem').addEventListener('click', ()=> baixarImagem('chartCapture', `Grafico_IOS_${slug(state.referencia)}`));
+
+    // ---- aba: tendência por obra ----
+    document.querySelectorAll('.tab-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.tab;
+        document.getElementById('tabConsolidado').style.display = tab==='consolidado' ? '' : 'none';
+        document.getElementById('tabTendencia').style.display = tab==='tendencia' ? '' : 'none';
+        if(tab==='tendencia') updateTendencia();
+      });
+    });
+    document.getElementById('tendObraSelect').addEventListener('change', (e)=>{
+      tendState.obraId = e.target.value;
+      updateTendencia();
+    });
+    document.getElementById('tendCompararSelect').addEventListener('change', (e)=>{
+      tendState.compararRef = e.target.value;
+      updateTendencia();
+    });
+    document.getElementById('tendInputWrap').addEventListener('input', (e)=>{
+      if(!e.target.classList.contains('cell-input') || !e.target.dataset.tendKey) return;
+      if(!tendState.dados[tendState.obraId]) tendState.dados[tendState.obraId] = emptyDados();
+      tendState.dados[tendState.obraId][e.target.dataset.tendKey] = e.target.value;
+      const calc = tendCompute();
+      renderTendResults(calc);
+      renderTendChart(calc);
+      saveTendDraft();
+    });
+    document.getElementById('btnCopiarImagemTend').addEventListener('click', ()=> copiarGrafico('tendChartCapture', `Tendencia_IOS_${slug(tendObraNome())}`));
+    document.getElementById('btnBaixarImagemTend').addEventListener('click', ()=> baixarImagem('tendChartCapture', `Tendencia_IOS_${slug(tendObraNome())}`));
   });
 
 })();
